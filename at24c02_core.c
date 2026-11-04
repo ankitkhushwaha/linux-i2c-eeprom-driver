@@ -10,14 +10,56 @@
 
 #include "at24c02_priv.h"
 
+u8 reg = 0x00;
+module_param(reg, byte, 0644);
+MODULE_PARM_DESC(reg, "Address pointer of eeprom");
+
+static ssize_t address_show(struct device *dev, struct device_attribute *attr,
+			    char *buf)
+{
+	return sysfs_emit(buf, "0x%02x\n", reg);
+}
+
+static ssize_t address_store(struct device *dev, struct device_attribute *attr,
+			     const char *buf, size_t count)
+{
+	int ret;
+	u8 addr;
+	ret = kstrtou8(buf, 16, &addr);
+	if (ret < 0)
+		return ret;
+
+	reg = addr;
+	return count;
+}
+
+static DEVICE_ATTR_RW(address);
+
+static struct attribute *dev_attrs[] = {
+	&dev_attr_address.attr,
+	NULL,
+};
+
+static const struct attribute_group dev_attr_grp = {
+	.attrs = dev_attrs,
+};
+
 static int at24c02_probe(struct i2c_client *client)
 {
+	int ret;
+
+	ret = device_add_group(&client->dev, &dev_attr_grp);
+	if (ret) {
+		pr_err("i2c client sysfs attr files creation failed\n");
+		return ret;
+	}
 	pr_info("at24c02 probed\n");
 	return 0;
 }
 
 static void at24c02_remove(struct i2c_client *client)
 {
+	device_remove_group(&client->dev, &dev_attr_grp);
 	pr_info("at24c02 removed\n");
 }
 

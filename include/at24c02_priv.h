@@ -26,4 +26,7 @@ static inline int at24c02_chrdev_register(void) { return 0; }
 static inline void at24c02_chrdev_unregister(void) {}
 #endif  /* CONFIG_AT24C02_CHARDEV */
 
+extern int at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count);
+extern int at24c02_i2c_write_data(struct i2c_client *client, u8 reg, u8 *buf, int count);
+
 #endif  /* __EEPROM_24C02_H__ */

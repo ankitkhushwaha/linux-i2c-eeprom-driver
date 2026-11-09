@@ -9,8 +9,6 @@
 
 #include "at24c02_priv.h"
 
-extern u8 reg;
-
 static int _at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
 {
 	u8 addr = 0x00;

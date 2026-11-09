@@ -9,13 +9,13 @@
 
 #include "at24c02_priv.h"
 
-static int _at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
+static int _at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf,
+				  int count)
 {
-	u8 addr = 0x00;
 	int ret;
 
 	/* send address to read */
-	ret = i2c_master_send(client, &addr, 1);
+	ret = i2c_master_send(client, &reg, 1);
 	if (ret < 0)
 		return ret;
 	if (ret != 1)
@@ -30,12 +30,13 @@ static int _at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
 	return ret;
 }
 
-int at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
+int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, char *buf,
+			  int count)
 {
 	u8 kbuf[EEPROM_CAPACITY];
 	int i, ret, len = 0;
 
-	ret = _at24c02_i2c_read_data(client, kbuf, count);
+	ret = _at24c02_i2c_read_data(client, reg, kbuf, count);
 	if (ret < 0)
 		return ret;
 

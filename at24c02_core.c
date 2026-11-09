@@ -54,24 +54,14 @@ static DEVICE_ATTR_RO(page_size);
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
-	u8 kbuf[EEPROM_CAPACITY];
-	int i, ret, len = 0;
-
-	ret = at24c02_i2c_read_data(to_i2c_client(dev), kbuf, sizeof(kbuf));
-	if (ret < 0)
-		return ret;
-
-	for (i = 0; i < sizeof(kbuf); i++)
-		len += sysfs_emit_at(buf, len, "0x%02x%s", kbuf[i],
-				     i == ret - 1 ? "\n" : " ");
-
-	return len;
+	return at24c02_i2c_read_data(to_i2c_client(dev), buf, EEPROM_CAPACITY);
 }
 
 static ssize_t eeprom_store(struct device *dev, struct device_attribute *attr,
 			    const char *buf, size_t count)
 {
 	/* Extra bytes is to store register address */
+	struct i2c_client *client = to_i2c_client(dev);
 	u8 kbuf[EEPROM_CAPACITY + 1], reg;
 	char *token, *buf_copy, *tmp_buf;
 	size_t remaining, tmp_len;
@@ -128,8 +118,8 @@ static ssize_t eeprom_store(struct device *dev, struct device_attribute *attr,
 		pr_debug("tmp_len:%d written: %d, remaining:%d\n", tmp_len,
 			 written, remaining);
 
-		ret = at24c02_i2c_write_data(to_i2c_client(dev), reg,
-					     kbuf + written + 1, tmp_len);
+		ret = at24c02_i2c_write_data(client, reg, kbuf + written + 1,
+					     tmp_len);
 		if (ret < 0) {
 			pr_err("i2c write failed: written:%d, remaining:%d\n",
 			       written, remaining);

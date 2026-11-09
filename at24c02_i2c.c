@@ -11,7 +11,7 @@
 
 extern u8 reg;
 
-int at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
+static int _at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
 {
 	u8 addr = 0x00;
 	int ret;
@@ -30,6 +30,22 @@ int at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
 		return -EIO;
 
 	return ret;
+}
+
+int at24c02_i2c_read_data(struct i2c_client *client, u8 *buf, int count)
+{
+	u8 kbuf[EEPROM_CAPACITY];
+	int i, ret, len = 0;
+
+	ret = _at24c02_i2c_read_data(client, kbuf, count);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < count; i++)
+		len += sysfs_emit_at(buf, len, "0x%02x%s", kbuf[i],
+				     i == ret - 1 ? "\n" : " ");
+
+	return len;
 }
 
 int at24c02_i2c_write_data(struct i2c_client *client, u8 reg, u8 *buf,

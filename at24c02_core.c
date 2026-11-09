@@ -35,8 +35,26 @@ static ssize_t address_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR_RW(address);
 
+static ssize_t capacity_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+	return sysfs_emit(buf, "%d\n", EEPROM_CAPACITY);
+}
+
+static DEVICE_ATTR_RO(capacity);
+
+static ssize_t page_size_show(struct device *dev, struct device_attribute *attr,
+			      char *buf)
+{
+	return sysfs_emit(buf, "%d\n", EEPROM_PAGE_SIZE);
+}
+
+static DEVICE_ATTR_RO(page_size);
+
 static struct attribute *dev_attrs[] = {
 	&dev_attr_address.attr,
+	&dev_attr_capacity.attr,
+	&dev_attr_page_size.attr,
 	NULL,
 };
 

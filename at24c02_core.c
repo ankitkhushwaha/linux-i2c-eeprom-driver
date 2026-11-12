@@ -14,10 +14,6 @@ u8 reg = 0x00;
 module_param(reg, byte, 0644);
 MODULE_PARM_DESC(reg, "Address pointer of eeprom");
 
-#if IS_ENABLED(CONFIG_AT24C02_CHARDEV)
-struct at24c02 at24;
-#endif
-
 static ssize_t address_show(struct device *dev, struct device_attribute *attr,
 			    char *buf)
 {
@@ -84,18 +80,35 @@ static const struct attribute_group dev_attr_grp = {
 static int at24c02_probe(struct i2c_client *client)
 {
 	int ret;
+	struct at24c02 *at24;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
 
-	ret = device_add_group(&client->dev, &dev_attr_grp);
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
+		at24 = devm_kmalloc(&client->dev, sizeof(*at24), GFP_KERNEL);
+		if (!at24)
+			return -ENOMEM;
+
+		at24->buf = devm_kmalloc(&client->dev, PAGE_SIZE, GFP_KERNEL);
+		if (!at24->buf)
+			return -ENOMEM;
+
+		at24->client = client;
+		i2c_set_clientdata(client, at24);
+
+		ret = at24c02_chrdev_register(at24);
+		if (ret) {
+			dev_err(&client->dev, "chrdev registration failed\n");
+			return ret;
+		}
+	}
+
+	ret = devm_device_add_group(&client->dev, &dev_attr_grp);
 	if (ret) {
 		pr_err("i2c client sysfs attr files creation failed\n");
 		return ret;
 	}
-
-	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
-		at24.client = client;
 
 	pr_info("at24c02 probed\n");
 	return 0;
@@ -103,9 +116,12 @@ static int at24c02_probe(struct i2c_client *client)
 
 static void at24c02_remove(struct i2c_client *client)
 {
-	device_remove_group(&client->dev, &dev_attr_grp);
-	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
-		at24.client = NULL;
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
+		struct at24c02 *at24 = i2c_get_clientdata(client);
+		at24c02_chrdev_unregister(at24);
+		at24->client = NULL;
+	}
+
 	pr_info("at24c02 removed\n");
 }
 
@@ -132,26 +148,7 @@ static struct i2c_driver at24c02_driver = {
     .id_table = at24c02_idtable,
 };
 
-static int __init at24c02_init(void)
-{
-	int ret;
-
-	ret = at24c02_chrdev_register();
-	if (ret) {
-		pr_err("at24c02 chrdev registration failed\n");
-		return ret;
-	}
-	return i2c_add_driver(&at24c02_driver);
-}
-
-static void __exit at24c02_exit(void)
-{
-	at24c02_chrdev_unregister();
-	i2c_del_driver(&at24c02_driver);
-}
-
-module_init(at24c02_init);
-module_exit(at24c02_exit);
+module_i2c_driver(at24c02_driver);
 
 MODULE_AUTHOR("Ankit khushwaha <ankitkhushwaha.dev@gmail.com>");
 MODULE_DESCRIPTION("I2C driver for 24c02 based on character device");

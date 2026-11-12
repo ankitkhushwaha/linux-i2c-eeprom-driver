@@ -10,26 +10,25 @@
 
 #include "at24c02_priv.h"
 
-u8 reg = 0x00;
-module_param(reg, byte, 0644);
-MODULE_PARM_DESC(reg, "Address pointer of eeprom");
-
 static ssize_t address_show(struct device *dev, struct device_attribute *attr,
 			    char *buf)
 {
-	return sysfs_emit(buf, "0x%02x\n", reg);
+	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
+	return sysfs_emit(buf, "0x%02x\n", at24->reg);
 }
 
 static ssize_t address_store(struct device *dev, struct device_attribute *attr,
 			     const char *buf, size_t count)
 {
+	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
 	int ret;
 	u8 addr;
+
 	ret = kstrtou8(buf, 16, &addr);
 	if (ret < 0)
 		return ret;
 
-	reg = addr;
+	at24->reg = addr;
 	return count;
 }
 
@@ -94,15 +93,16 @@ static int at24c02_probe(struct i2c_client *client)
 		if (!at24->buf)
 			return -ENOMEM;
 
-		at24->client = client;
-		i2c_set_clientdata(client, at24);
-
 		ret = at24c02_chrdev_register(at24);
 		if (ret) {
 			dev_err(&client->dev, "chrdev registration failed\n");
 			return ret;
 		}
 	}
+
+	at24->client = client;
+	at24->reg = BASE_ADDR;
+	i2c_set_clientdata(client, at24);
 
 	ret = devm_device_add_group(&client->dev, &dev_attr_grp);
 	if (ret) {
@@ -116,12 +116,12 @@ static int at24c02_probe(struct i2c_client *client)
 
 static void at24c02_remove(struct i2c_client *client)
 {
-	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
-		struct at24c02 *at24 = i2c_get_clientdata(client);
-		at24c02_chrdev_unregister(at24);
-		at24->client = NULL;
-	}
+	struct at24c02 *at24 = i2c_get_clientdata(client);
 
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
+		at24c02_chrdev_unregister(at24);
+
+	at24->client = NULL;
 	pr_info("at24c02 removed\n");
 }
 

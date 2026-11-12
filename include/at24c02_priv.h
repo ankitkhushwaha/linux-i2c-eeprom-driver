@@ -10,13 +10,13 @@
 #include <linux/types.h>
 #include <linux/kconfig.h>
 
-
 #define MODULE_NAME "eeprom"
 
 struct i2c_client;
 struct device;
 struct class;
 
+#define BASE_ADDR 0x00
 #define EEPROM_PAGE_SIZE 8
 #define EEPROM_CAPACITY 256
 
@@ -27,7 +27,9 @@ struct at24c02 {
 	struct class *class;
 	dev_t devt;
 	char *buf;
+	u8 reg;
 };
+
 #if IS_ENABLED(CONFIG_AT24C02_CHARDEV)
 int at24c02_chrdev_register(struct at24c02 *at24);
 void at24c02_chrdev_unregister(struct at24c02 *at24);

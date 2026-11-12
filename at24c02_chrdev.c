@@ -12,26 +12,25 @@
 
 #include "at24c02_priv.h"
 
-extern u8 reg;
-
 static loff_t at24c02_llseek(struct file *filp, loff_t offset, int whence)
 {
+	struct at24c02 *at24 = filp->private_data;
 	u8 off = (u8)offset;
 
 	switch (whence) {
 	case SEEK_SET:
-		reg = off;
+		at24->reg = off;
 		break;
 	case SEEK_CUR:
-		reg += off;
+		at24->reg += off;
 		break;
 	case SEEK_END:
-		reg -= off;
+		at24->reg -= off;
 		break;
 	default:
 		return -EINVAL;
 	}
-	return reg;
+	return at24->reg;
 }
 
 static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,

@@ -53,7 +53,8 @@ static DEVICE_ATTR_RO(page_size);
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
-	return at24c02_i2c_read_data(to_i2c_client(dev), 0x00, buf,
+	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
+	return at24c02_i2c_read_data(to_i2c_client(dev), at24->reg, buf,
 				     EEPROM_CAPACITY);
 }
 

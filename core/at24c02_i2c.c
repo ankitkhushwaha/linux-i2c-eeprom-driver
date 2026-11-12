@@ -33,12 +33,16 @@ static int _at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf,
 int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, char *buf,
 			  int count)
 {
+	struct at24c02 *at24 = i2c_get_clientdata(client);
 	u8 kbuf[EEPROM_CAPACITY];
 	int i, ret, len = 0;
 
 	ret = _at24c02_i2c_read_data(client, reg, kbuf, count);
 	if (ret < 0)
 		return ret;
+
+	/* update the address pointer */
+	at24->reg += ret;
 
 	for (i = 0; i < count; i++)
 		len += sysfs_emit_at(buf, len, "0x%02x%s", kbuf[i],
@@ -82,6 +86,7 @@ static int _at24c02_i2c_write_data(struct i2c_client *client, u8 reg, u8 *buf,
 int at24c02_i2c_write_data(struct i2c_client *client, const char *buf,
 			   size_t count)
 {
+	struct at24c02 *at24 = i2c_get_clientdata(client);
 	/* Extra bytes is to store register address */
 	u8 kbuf[EEPROM_CAPACITY + 1], base_addr, reg;
 	char *token, *buf_copy, *tmp_buf;
@@ -154,6 +159,9 @@ int at24c02_i2c_write_data(struct i2c_client *client, const char *buf,
 			       written, remaining, ret);
 			goto fail;
 		}
+
+		/* update the address pointer */
+		at24->reg += tmp_len;
 
 		/*
 		 * I2c write return no of bytes written,

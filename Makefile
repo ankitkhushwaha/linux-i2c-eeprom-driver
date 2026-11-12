@@ -12,11 +12,8 @@ ccflags-$(CONFIG_AT24C02_CHARDEV) += -DCONFIG_AT24C02_CHARDEV=1
 KERNELDIR ?= /home/ankit/dev/linux-src/linux-mainline/build_qemu
 HOSTDIR := /lib/modules/$(shell uname -r)/build
 
-#QEMUDIR := /home/ankit/dev/qemu/linux-7.2.8/build-qemu
-#QEMU_CC := /home/ankit/dev/qemu/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-
-
-QEMUDIR := /home/ankit/dev/linux-src/linux-6.6.20-ti-rt-arm32-r3/build
-QEMU_CC := arm-linux-gnueabihf-
+QEMUDIR := /home/ankit/dev/linux-src/linux-6.6.20-ti-rt-arm32-r3/build-nov
+QEMU_CC := /home/ankit/dev/qemu/arm-gnu-toolchain/bin/arm-none-linux-gnueabihf-
 QEMU_ARCH := arm
 
 modules:

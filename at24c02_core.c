@@ -14,6 +14,10 @@ u8 reg = 0x00;
 module_param(reg, byte, 0644);
 MODULE_PARM_DESC(reg, "Address pointer of eeprom");
 
+#if IS_ENABLED(CONFIG_AT24C02_CHARDEV)
+struct at24c02 at24;
+#endif
+
 static ssize_t address_show(struct device *dev, struct device_attribute *attr,
 			    char *buf)
 {
@@ -54,7 +58,8 @@ static DEVICE_ATTR_RO(page_size);
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
-	return at24c02_i2c_read_data(to_i2c_client(dev), buf, EEPROM_CAPACITY);
+	return at24c02_i2c_read_data(to_i2c_client(dev), 0x00, buf,
+				     EEPROM_CAPACITY);
 }
 
 static ssize_t eeprom_store(struct device *dev, struct device_attribute *attr,
@@ -88,6 +93,10 @@ static int at24c02_probe(struct i2c_client *client)
 		pr_err("i2c client sysfs attr files creation failed\n");
 		return ret;
 	}
+
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
+		at24.client = client;
+
 	pr_info("at24c02 probed\n");
 	return 0;
 }
@@ -95,6 +104,8 @@ static int at24c02_probe(struct i2c_client *client)
 static void at24c02_remove(struct i2c_client *client)
 {
 	device_remove_group(&client->dev, &dev_attr_grp);
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
+		at24.client = NULL;
 	pr_info("at24c02 removed\n");
 }
 
@@ -123,11 +134,19 @@ static struct i2c_driver at24c02_driver = {
 
 static int __init at24c02_init(void)
 {
+	int ret;
+
+	ret = at24c02_chrdev_register();
+	if (ret) {
+		pr_err("at24c02 chrdev registration failed\n");
+		return ret;
+	}
 	return i2c_add_driver(&at24c02_driver);
 }
 
 static void __exit at24c02_exit(void)
 {
+	at24c02_chrdev_unregister();
 	i2c_del_driver(&at24c02_driver);
 }
 

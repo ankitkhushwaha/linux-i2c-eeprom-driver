@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0
 obj-m += at24c02_drv.o
 
+CONFIG_AT24C02_CHARDEV ?= y
+
 at24c02_drv-y := at24c02_core.o at24c02_i2c.o
 at24c02_drv-$(CONFIG_AT24C02_CHARDEV) += at24c02_chrdev.o
 
 ccflags-y += -DDEBUG -I$(src)/include
+ccflags-$(CONFIG_AT24C02_CHARDEV) += -DCONFIG_AT24C02_CHARDEV=1
 
 KERNELDIR ?= /home/ankit/dev/linux-src/linux-mainline/build_qemu
 HOSTDIR := /lib/modules/$(shell uname -r)/build

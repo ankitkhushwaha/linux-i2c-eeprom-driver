@@ -7,6 +7,7 @@
 #define __EEPROM_24C02_H__
 
 #include <linux/types.h>
+#include <linux/kconfig.h>
 
 #define MODULE_NAME "eeprom"
 
@@ -18,7 +19,12 @@ struct cdev;
 #define EEPROM_PAGE_SIZE 8
 #define EEPROM_CAPACITY 256
 
-#ifdef CONFIG_AT24C02_CHARDEV
+#if IS_ENABLED(CONFIG_AT24C02_CHARDEV)
+struct at24c02 {
+	struct i2c_client *client;
+	struct cdev *cdev;
+};
+
 int at24c02_chrdev_register(void);
 void at24c02_chrdev_unregister(void);
 #else

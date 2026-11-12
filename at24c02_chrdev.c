@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * i2c Driver chardev core for at24c02
+ */
+
+#define pr_fmt(fmt) "%s :" fmt, __func__
+
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -5,30 +12,41 @@
 
 #include "at24c02_priv.h"
 
-#ifdef CONFIG_AT24C02_CHARDEV
-struct at24c02_char_priv {
-	struct i2c_client *client;
-	struct cdev *cdev;
-};
+extern u8 reg;
 
 static dev_t at24c02_devt;
 struct class *at24c02_class;
 struct device *at24c02_device;
 
-static struct at24c02_char_priv at24c02_char_priv;
+extern struct at24c02 at24;
 
 static loff_t at24c02_llseek(struct file *filp, loff_t offset, int whence)
 {
-	return 0;
+	u8 off = (u8)offset;
+
+	switch (whence) {
+	case SEEK_SET:
+		reg = off;
+		break;
+	case SEEK_CUR:
+		reg += off;
+		break;
+	case SEEK_END:
+		reg -= off;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return reg;
 }
 
-static ssize_t at24c02_read(struct file *filp, char __user *buff, size_t count,
+static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 			    loff_t *f_pos)
 {
 	return 0;
 }
 
-static ssize_t at24c02_write(struct file *filp, const char __user *buff,
+static ssize_t at24c02_write(struct file *filp, const char __user *buf,
 			     size_t count, loff_t *f_pos)
 {
 	return 0;
@@ -36,11 +54,13 @@ static ssize_t at24c02_write(struct file *filp, const char __user *buff,
 
 static int at24c02_open(struct inode *inode, struct file *filp)
 {
+	filp->private_data = at24.client;
 	return 0;
 }
 
 static int at24c02_release(struct inode *inode, struct file *filp)
 {
+	filp->private_data = NULL;
 	return 0;
 }
 
@@ -63,10 +83,10 @@ int at24c02_chrdev_register(void)
 		return ret;
 	}
 
-	cdev_init(at24c02_char_priv.cdev, &at24c02_fops);
-	at24c02_char_priv.cdev->owner = THIS_MODULE;
+	cdev_init(at24.cdev, &at24c02_fops);
+	at24.cdev->owner = THIS_MODULE;
 
-	ret = cdev_add(at24c02_char_priv.cdev, at24c02_devt, 1);
+	ret = cdev_add(at24.cdev, at24c02_devt, 1);
 	if (ret) {
 		pr_err("at24c02 cdev init failed\n");
 		goto unreg_chardev;
@@ -91,7 +111,7 @@ int at24c02_chrdev_register(void)
 class_del:
 	class_destroy(at24c02_class);
 cdev_del:
-	cdev_del(at24c02_char_priv.cdev);
+	cdev_del(at24.cdev);
 unreg_chardev:
 	unregister_chrdev_region(at24c02_devt, 1);
 	return ret;
@@ -101,7 +121,6 @@ void at24c02_chrdev_unregister(void)
 {
 	device_destroy(at24c02_class, at24c02_devt);
 	class_destroy(at24c02_class);
-	cdev_del(at24c02_char_priv.cdev);
+	cdev_del(at24.cdev);
 	unregister_chrdev_region(at24c02_devt, 1);
 }
-#endif /* CONFIG_AT24C02_CHARDEV */

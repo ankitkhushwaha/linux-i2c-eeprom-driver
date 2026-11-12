@@ -84,11 +84,11 @@ static int at24c02_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -EOPNOTSUPP;
 
-	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
-		at24 = devm_kmalloc(&client->dev, sizeof(*at24), GFP_KERNEL);
-		if (!at24)
-			return -ENOMEM;
+	at24 = devm_kmalloc(&client->dev, sizeof(*at24), GFP_KERNEL);
+	if (!at24)
+		return -ENOMEM;
 
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
 		at24->buf = devm_kmalloc(&client->dev, PAGE_SIZE, GFP_KERNEL);
 		if (!at24->buf)
 			return -ENOMEM;

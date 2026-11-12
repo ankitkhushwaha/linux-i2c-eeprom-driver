@@ -75,7 +75,7 @@ static int _at24c02_i2c_write_data(struct i2c_client *client, u8 reg, u8 *buf,
 	 * to keep it safer side.
 	 */
 	msleep(10);
-	dev_err(&client->dev, "i2c write success, ret=%d\n", ret);
+	dev_info(&client->dev, "i2c write success, ret=%d\n", ret);
 	return ret;
 }
 

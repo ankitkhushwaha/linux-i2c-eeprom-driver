@@ -3,8 +3,8 @@ obj-m += at24c02_drv.o
 
 CONFIG_AT24C02_CHARDEV ?= y
 
-at24c02_drv-y := at24c02_core.o at24c02_i2c.o
-at24c02_drv-$(CONFIG_AT24C02_CHARDEV) += at24c02_chrdev.o
+at24c02_drv-y := core/at24c02_core.o core/at24c02_i2c.o
+at24c02_drv-$(CONFIG_AT24C02_CHARDEV) += core/at24c02_chrdev.o
 
 ccflags-y += -DDEBUG -I$(src)/include
 ccflags-$(CONFIG_AT24C02_CHARDEV) += -DCONFIG_AT24C02_CHARDEV=1

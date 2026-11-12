@@ -155,13 +155,6 @@ int at24c02_i2c_write_data(struct i2c_client *client, const char *buf,
 			goto fail;
 		}
 
-		/* addr + byte data */
-		if (ret != tmp_len + 1) {
-			dev_err(&client->dev,
-				"short write detected, written:%d, remaining:%d, ret=%d, expected=%d\n",
-				written, remaining, ret, tmp_len);
-			goto fail;
-		}
 		/*
 		 * I2c write return no of bytes written,
 		 * i.e Address byte + data bytes.

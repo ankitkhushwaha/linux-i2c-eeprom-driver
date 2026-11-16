@@ -53,8 +53,7 @@ static DEVICE_ATTR_RO(page_size);
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
-	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
-	return at24c02_i2c_read_data(to_i2c_client(dev), at24->reg, buf,
+	return at24c02_i2c_read_data(to_i2c_client(dev), BASE_ADDR, buf,
 				     EEPROM_CAPACITY);
 }
 
@@ -89,11 +88,10 @@ static int at24c02_probe(struct i2c_client *client)
 	if (!at24)
 		return -ENOMEM;
 
-	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
-		at24->buf = devm_kmalloc(&client->dev, PAGE_SIZE, GFP_KERNEL);
-		if (!at24->buf)
-			return -ENOMEM;
+	at24->client = client;
+	at24->reg = BASE_ADDR;
 
+	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
 		ret = at24c02_chrdev_register(at24);
 		if (ret) {
 			dev_err(&client->dev, "chrdev registration failed\n");
@@ -101,8 +99,6 @@ static int at24c02_probe(struct i2c_client *client)
 		}
 	}
 
-	at24->client = client;
-	at24->reg = BASE_ADDR;
 	i2c_set_clientdata(client, at24);
 
 	ret = devm_device_add_group(&client->dev, &dev_attr_grp);

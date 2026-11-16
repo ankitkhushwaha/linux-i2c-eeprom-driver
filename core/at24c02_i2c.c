@@ -34,8 +34,11 @@ int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, char *buf,
 			  int count)
 {
 	struct at24c02 *at24 = i2c_get_clientdata(client);
-	u8 kbuf[EEPROM_CAPACITY];
+	u8 kbuf[EEPROM_CAPACITY] = { 0 };
 	int i, ret, len = 0;
+
+	if (!count)
+		return 0;
 
 	ret = _at24c02_i2c_read_data(client, reg, kbuf, count);
 	if (ret < 0)
@@ -55,7 +58,7 @@ static int _at24c02_i2c_write_data(struct i2c_client *client, u8 reg, u8 *buf,
 				   int count)
 {
 	int ret, buf_len = count + 1;
-	u8 kbuf[EEPROM_PAGE_SIZE + 1];
+	u8 kbuf[EEPROM_PAGE_SIZE + 1] = { 0 };
 
 	kbuf[0] = reg;
 	memcpy(kbuf + 1, buf, count);
@@ -93,6 +96,9 @@ int at24c02_i2c_write_data(struct i2c_client *client, const char *buf,
 	size_t remaining, tmp_len, room;
 	size_t written = 0;
 	int ret, len, i;
+
+	if (!count)
+		return 0;
 
 	if (count >= PAGE_SIZE - 1) {
 		dev_err(&client->dev,

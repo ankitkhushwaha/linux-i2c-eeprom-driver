@@ -53,8 +53,20 @@ static DEVICE_ATTR_RO(page_size);
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
-	return at24c02_i2c_read_data(to_i2c_client(dev), BASE_ADDR, buf,
-				     EEPROM_CAPACITY);
+	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
+	int i, ret, len = 0;
+
+	ret = at24c02_i2c_read_data(at24->client, BASE_ADDR, at24->buf,
+				    EEPROM_CAPACITY);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < EEPROM_CAPACITY; i++)
+		len += scnprintf(buf + len, PAGE_SIZE - len, "0x%02x%s",
+				 at24->buf[i], i == ret - 1 ? "\n" : " ");
+	len += scnprintf(buf + len, PAGE_SIZE - len, "\n");
+
+	return len;
 }
 
 static ssize_t eeprom_store(struct device *dev, struct device_attribute *attr,

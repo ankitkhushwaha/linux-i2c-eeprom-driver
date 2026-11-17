@@ -26,7 +26,7 @@ struct at24c02 {
 	struct cdev cdev;
 	struct class *class;
 	dev_t devt;
-	char *buf;
+	u8 *buf;
 	u8 reg;
 };
 
@@ -38,7 +38,7 @@ static inline int at24c02_chrdev_register(struct at24c02 *at24) { return 0; }
 static inline void at24c02_chrdev_unregister(struct at24c02 *at24) {}
 #endif  /* CONFIG_AT24C02_CHARDEV */
 
-extern int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, char *buf, int count);
+extern int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf, int count);
 extern int at24c02_i2c_write_data(struct i2c_client *client, const char *buf, size_t count);
 
 #endif  /* __EEPROM_24C02_H__ */

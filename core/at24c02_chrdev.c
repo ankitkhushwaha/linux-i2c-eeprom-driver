@@ -41,7 +41,31 @@ static loff_t at24c02_llseek(struct file *filp, loff_t offset, int whence)
 static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 			    loff_t *f_pos)
 {
-	return 0;
+	struct at24c02 *at24 = filp->private_data;
+	struct i2c_client *client = at24->client;
+	size_t len;
+	int ret;
+
+	if (*f_pos >= EEPROM_CAPACITY)
+		return 0;
+
+	len = min_t(size_t, count, EEPROM_CAPACITY - *f_pos);
+
+	pr_debug("before f_pos: %llu, count given: %zu, count_f:%zu\n", *f_pos,
+		 count, len);
+
+	ret = at24c02_i2c_read_data(client, BASE_ADDR + *f_pos, at24->buf, len);
+	if (ret < 0)
+		return ret;
+
+	if (copy_to_user(buf, at24->buf, ret) > 0) {
+		pr_warn("copy_to_user failed to read\n");
+		return -EINVAL;
+	}
+	*f_pos += ret;
+
+	pr_debug("after f_pos: %llu, count: %zu, ret:%d\n", *f_pos, len, ret);
+	return len;
 }
 
 static ssize_t at24c02_write(struct file *filp, const char __user *buf,

@@ -95,7 +95,7 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 	base_addr = buf[0];
 	remaining = count - 1;
 
-	dev_info(&client->dev, "base_addr:0x%02x count: %d\n", base_addr,
+	dev_info(&client->dev, "base_addr:0x%02x count: %u\n", base_addr,
 		 count);
 
 	mutex_lock(&at24->lock);
@@ -105,19 +105,19 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 
 		tmp_len = min(remaining, room);
 
-		pr_debug("tmp_len:%d written: %d, remaining:%d\n", tmp_len,
+		pr_debug("tmp_len:%u written: %u, remaining:%u\n", tmp_len,
 			 written, remaining);
 
 		ret = _at24c02_i2c_write_data(client, reg, buf + written + 1,
 					      tmp_len);
 		if (ret < 0) {
-			pr_err("i2c write failed: written:%d, remaining:%d, ret=%d\n",
+			pr_err("i2c write failed: written:%u, remaining:%u, ret=%d\n",
 			       written, remaining, ret);
 			goto fail;
 		}
 
 		/* update the address pointer */
-    	at24->reg = reg + tmp_len;
+		at24->reg = reg + tmp_len;
 
 		/*
 		 * I2c write return no of bytes written,

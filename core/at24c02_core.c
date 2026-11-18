@@ -5,6 +5,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
 
@@ -175,6 +176,7 @@ static int at24c02_probe(struct i2c_client *client)
 
 	at24->client = client;
 	at24->reg = BASE_ADDR;
+	mutex_init(&at24->lock);
 
 	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV)) {
 		ret = at24c02_chrdev_register(at24);
@@ -208,6 +210,7 @@ static void at24c02_remove(struct i2c_client *client)
 	if (IS_ENABLED(CONFIG_AT24C02_CHARDEV))
 		at24c02_chrdev_unregister(at24);
 
+	mutex_destroy(&at24->lock);
 	at24->client = NULL;
 	pr_info("at24c02 removed\n");
 }

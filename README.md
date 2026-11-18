@@ -2,18 +2,47 @@
 
 An out-of-tree Linux kernel module for the Microchip 24xx02 family of 2 Kbit
 (256 x 8) I2C serial EEPROMs (24AA02 / 24LC02B / 24FC02). It binds to an I2C
-client, exposes the EEPROM through sysfs, and has an optional character device
-interface.
+client and exposes the EEPROM through two interfaces: sysfs attributes (hex
+text) and an optional character device (raw bytes).
 
 - [Datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/24AA02-24LC02B-24FC02-2K-I2C-Serial-EEPROM-20001709N.pdf)
 
 ## Features
 
-- Binds via I2C device ID table or Device Tree (`ee24c02`).
-- sysfs attributes to read and write the whole EEPROM as hex bytes.
-- Page-aware writes: data is split on 8-byte page boundaries, with a 10 ms wait
-  after each page write for the internal write cycle.
-- Optional character device (`/dev/eeprom`), selectable at build time.
+- Binds via the I2C device ID table or Device Tree (`ee24c02`).
+- **sysfs interface**: read and write the EEPROM as hex bytes, with input
+  validation.
+- **Character device** (`/dev/eeprom`, optional at build time): `read`,
+  `write` and `llseek` with raw bytes.
+- **Page-aware writes**: data is split on 8-byte page boundaries, with a 10 ms
+  wait after each page write for the internal write cycle.
+- **Address pointer tracking**: the driver keeps a per-device address pointer
+  that advances after every read and write.
+- **Locking**: a per-device mutex serializes I2C transactions, so the sysfs and
+  character device paths can be used at the same time.
+
+## Repository layout
+
+```
+.
+├── Makefile              # Kbuild + helper targets (host, qemu)
+├── Kconfig               # Reserved, currently empty
+├── core/
+│   ├── at24c02_core.c    # I2C driver, probe/remove, sysfs attributes
+│   ├── at24c02_i2c.c     # I2C read/write helpers (locking, page-aware writes)
+│   └── at24c02_chrdev.c  # Optional character device
+├── include/
+│   └── at24c02_priv.h    # Constants, struct at24c02, shared declarations
+└── LICENSE               # GPL-2.0
+```
+
+The module is built as `at24c02_drv.ko`.
+
+## Requirements
+
+- A C toolchain matching the kernel (and a cross toolchain if you target ARM).
+- A board or emulator with a 24xx02 on an I2C bus. The device responds at
+  7-bit addresses `0x50`-`0x57`, selected by the A0-A2 pins.
 
 ## Building
 
@@ -39,10 +68,10 @@ make qemu QEMUDIR=/path/to/kernel/build QEMU_CC=arm-linux-gnueabihf-
 > Makefile point at paths on my machine. Override them as shown above
 > or edit the Makefile.
 
-Disable the character device interface:
+Enable the character device interface:
 
 ```sh
-make host CONFIG_AT24C02_CHARDEV=n
+make host CONFIG_AT24C02_CHARDEV=y
 ```
 
 Clean:
@@ -50,6 +79,8 @@ Clean:
 ```sh
 make clean
 ```
+
+The module is built with `-DDEBUG`, so `pr_debug()` output is enabled.
 
 ## Usage
 
@@ -85,7 +116,10 @@ shows `at24c02 probed`. To remove it again:
 echo 0x50 | sudo tee /sys/bus/i2c/devices/i2c-1/delete_device
 ```
 
-### 3. Use the sysfs interface
+> Only one EEPROM instance is supported at a time: the character device and
+> class are registered under the fixed name `eeprom`.
+
+### 3. sysfs interface
 
 The attributes appear under the I2C client directory, for example
 `/sys/bus/i2c/devices/1-0050/`.
@@ -93,7 +127,7 @@ The attributes appear under the I2C client directory, for example
 | Attribute | Access | Description |
 |-----------|--------|-------------|
 | `eeprom` | read/write | Read the full 256 bytes, or write bytes starting at a given address |
-| `address` | read/write | Address pointer in hex, also exposed as the `reg` module parameter |
+| `address` | read/write | Current address pointer, in hex |
 | `capacity` | read-only | EEPROM size in bytes (`256`) |
 | `page_size` | read-only | Page write size in bytes (`8`) |
 
@@ -105,7 +139,7 @@ cat /sys/bus/i2c/devices/1-0050/eeprom
 ```
 
 **Write** by passing the start address followed by the data bytes, all in hex
-and separated by spaces:
+and separated by whitespace:
 
 ```sh
 # Write 0xde 0xad 0xbe 0xef starting at address 0x10
@@ -116,24 +150,50 @@ Notes on writes:
 
 - The first value is always the start address; at least one data byte must
   follow it.
+- Every value must be a valid hex byte (`0x..` or bare hex); anything else is
+  rejected with an error in the kernel log.
 - Writes that cross an 8-byte page boundary are split into separate page
   writes automatically.
-- `eeprom` reads always start at address `0x00`; the `address` attribute does
-  not affect them.
+- Input must be shorter than one page of text (`PAGE_SIZE - 1` characters).
 
-**Address pointer:**
+**Address pointer.** The driver advances `address` after each read or write
+to the byte following the last one accessed. You can also set it by hand:
 
 ```sh
-cat /sys/bus/i2c/devices/1-0050/address        # 0x00
-echo 20 | sudo tee /sys/bus/i2c/devices/1-0050/address   # sets 0x20 (hex)
+cat /sys/bus/i2c/devices/1-0050/address                   # 0x00
+echo 20 | sudo tee /sys/bus/i2c/devices/1-0050/address    # sets 0x20 (hex)
 ```
 
-### 4. Character device (experimental)
+`eeprom` reads always start at address `0x00`; the `address` attribute does
+not change where they start.
 
-With `CONFIG_AT24C02_CHARDEV` enabled (the default), loading the module also
-creates the `eeprom` class and the `/dev/eeprom` node. `llseek` updates the
-address pointer, but `read` and `write` do not transfer data yet. Use the sysfs
-interface for real I/O.
+### 4. Character device
+
+With `CONFIG_AT24C02_CHARDEV` enabled, a probed device creates
+the `eeprom` class and the `/dev/eeprom` node.
+
+| Operation | Behavior |
+|-----------|----------|
+| `read` | Reads from the current file offset, up to the end of the EEPROM. Returns `0` at offset 256. |
+| `write` | Raw bytes: the **first byte is the EEPROM address**, the remaining bytes are data. At least one data byte is required. Page boundaries are handled automatically. |
+| `llseek` | `SEEK_SET`, `SEEK_CUR` and `SEEK_END` are supported. Valid offsets are `0` to `256`; there is no wrap-around, and anything outside that range returns `EINVAL`. |
+
+**Read** the whole EEPROM:
+
+```sh
+sudo hexdump -C /dev/eeprom
+```
+
+**Write** `de ad be ef` starting at address `0x10`. The first byte is the
+address, so the payload is five bytes:
+
+```sh
+echo '\x10\xde\xad\xbe\xef' | sudo tee /dev/eeprom
+```
+
+Keep in mind that `write` takes the address from the data itself, not from the
+file offset. The offset only limits how many bytes are accepted, and it
+advances by the number of bytes written (address byte included).
 
 ## Unloading
 
@@ -141,6 +201,15 @@ interface for real I/O.
 sudo rmmod at24c02_drv
 ```
 
+## Contributing
+
+Issues and pull requests are welcome. The repository includes a `.clang-format`
+file that follows the kernel coding style; please format changes with it.
+
 ## License
 
 Licensed under the GNU General Public License v2.0 only. See [LICENSE](LICENSE).
+
+## Author
+
+[Ankit Khushwaha](https://github.com/ankitkhushwaha)

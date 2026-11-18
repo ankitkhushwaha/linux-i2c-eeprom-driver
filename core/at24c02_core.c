@@ -119,12 +119,17 @@ static int at24c02_probe(struct i2c_client *client)
 
 	ret = devm_device_add_group(&client->dev, &dev_attr_grp);
 	if (ret) {
-		pr_err("i2c client sysfs attr files creation failed\n");
-		return ret;
+		dev_err(&client->dev,
+			"i2c client sysfs attr files creation failed\n");
+		goto fail;
 	}
 
 	pr_info("at24c02 probed\n");
 	return 0;
+
+fail:
+	at24c02_chrdev_unregister(at24);
+	return ret;
 }
 
 static void at24c02_remove(struct i2c_client *client)

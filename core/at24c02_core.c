@@ -72,7 +72,75 @@ static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 static ssize_t eeprom_store(struct device *dev, struct device_attribute *attr,
 			    const char *buf, size_t count)
 {
-	return at24c02_i2c_write_data(to_i2c_client(dev), buf, count);
+	/* Extra bytes is to store register address */
+	u8 kbuf[EEPROM_CAPACITY + 1];
+	char *token, *buf_copy, *tmp_buf;
+	int ret, len, i;
+
+	if (!count)
+		return 0;
+
+	if (count >= PAGE_SIZE - 1) {
+		dev_err(dev, "input too long (%zu bytes), possibly truncated\n",
+			count);
+		return -E2BIG;
+	}
+
+	i = len = 0;
+	buf_copy = kstrndup(buf, count, GFP_KERNEL);
+	if (!buf_copy)
+		return -ENOMEM;
+
+	tmp_buf = strim(buf_copy);
+	if (!tmp_buf)
+		return -EINVAL;
+
+	while ((token = strsep(&tmp_buf, " \t\n")) != NULL) {
+		if (!*token)
+			continue;
+
+		ret = kstrtou8(token, 16, &kbuf[i]);
+		if (ret < 0) {
+			dev_err(dev, "invalid input:%s\n", token);
+			goto fail;
+		};
+
+		pr_debug("token=%s, kbuf[%i]=0x%02x\n", token, i, kbuf[i]);
+		/*
+		 * Beyond capacity: wrap onto kbuf[1],
+		 * same as EEPROM address wrap
+		 */
+		if (i == EEPROM_CAPACITY) {
+			len = EEPROM_CAPACITY + 1;
+			i = 1;
+		} else
+			i++;
+	}
+
+	/* No data rollover happend. */
+	if (len == 0)
+		len = i;
+
+	/* Only address pointer provided. */
+	if (len <= 1) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	pr_debug("i:%d, len:%d\n", i, len);
+
+	ret = at24c02_i2c_write_data(to_i2c_client(dev), kbuf, len);
+	if (ret < 0)
+		goto fail;
+	if (ret != len - 1) {
+		dev_err(dev, "ret: %d, failed to write: %d\n", ret,
+			len - ret - 1);
+	}
+
+	ret = count;
+fail:
+	kfree(buf_copy);
+	return ret;
 }
 static DEVICE_ATTR_RW(eeprom);
 

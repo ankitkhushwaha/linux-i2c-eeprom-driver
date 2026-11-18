@@ -43,7 +43,7 @@ int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf, int count)
 		return ret;
 
 	/* update the address pointer */
-	at24->reg += ret;
+	at24->reg = reg + ret;
 
 	return ret;
 }
@@ -112,6 +112,9 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 			return ret;
 		}
 
+		/* update the address pointer */
+    	at24->reg = reg + tmp_len;
+
 		/*
 		 * I2c write return no of bytes written,
 		 * i.e Address byte + data bytes.
@@ -119,8 +122,6 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 		written += tmp_len;
 		remaining -= tmp_len;
 	}
-	/* update the address pointer */
-	at24->reg = base_addr + written;
 
 	/*
 	* If everything went ok (i.e. msg transferred), return #bytes

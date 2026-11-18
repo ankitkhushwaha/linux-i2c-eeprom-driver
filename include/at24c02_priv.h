@@ -6,10 +6,11 @@
 #ifndef __EEPROM_24C02_H__
 #define __EEPROM_24C02_H__
 
-#include <linux/cdev.h>
-#include <linux/types.h>
 #include <linux/kconfig.h>
+#include <linux/types.h>
+#include <linux/cdev.h>
 
+#include <linux/mutex.h>
 #define MODULE_NAME "eeprom"
 
 struct i2c_client;
@@ -23,8 +24,8 @@ struct class;
 struct at24c02 {
 	struct i2c_client *client;
 	struct device *device;
-	struct cdev cdev;
 	struct class *class;
+	struct cdev cdev;
 	dev_t devt;
 	u8 *buf;
 	u8 reg;

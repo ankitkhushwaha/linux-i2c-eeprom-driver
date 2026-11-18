@@ -5,11 +5,11 @@
 
 #define pr_fmt(fmt) "%s :" fmt, __func__
 
-#include <linux/cdev.h>
 #include <linux/device.h>
-#include <linux/fs.h>
 #include <linux/kernel.h>
+#include <linux/cdev.h>
 #include <linux/i2c.h>
+#include <linux/fs.h>
 
 #include "at24c02_priv.h"
 

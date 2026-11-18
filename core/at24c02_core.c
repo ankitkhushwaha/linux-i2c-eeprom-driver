@@ -3,10 +3,10 @@
  * i2c Driver for at24c02
  */
 
-#include <linux/i2c.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/init.h>
+#include <linux/i2c.h>
 
 #include "at24c02_priv.h"
 

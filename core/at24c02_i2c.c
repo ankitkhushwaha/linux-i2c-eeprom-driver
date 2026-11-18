@@ -33,17 +33,14 @@ static int _at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf,
 int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf, int count)
 {
 	struct at24c02 *at24 = i2c_get_clientdata(client);
-	u8 kbuf[EEPROM_CAPACITY];
 	int ret;
 
 	if (!count)
 		return 0;
 
-	ret = _at24c02_i2c_read_data(client, reg, kbuf, count);
+	ret = _at24c02_i2c_read_data(client, reg, buf, count);
 	if (ret < 0)
 		return ret;
-
-	memcpy(buf, kbuf, count);
 
 	/* update the address pointer */
 	at24->reg += ret;

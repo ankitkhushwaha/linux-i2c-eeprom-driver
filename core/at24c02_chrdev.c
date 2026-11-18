@@ -43,6 +43,7 @@ static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 {
 	struct at24c02 *at24 = filp->private_data;
 	struct i2c_client *client = at24->client;
+	u8 kbuf[EEPROM_CAPACITY];
 	size_t len;
 	int ret;
 
@@ -54,7 +55,7 @@ static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 	pr_debug("before f_pos: %llu, count given: %zu, count_f:%zu\n", *f_pos,
 		 count, len);
 
-	ret = at24c02_i2c_read_data(client, BASE_ADDR + *f_pos, at24->buf, len);
+	ret = at24c02_i2c_read_data(client, BASE_ADDR + *f_pos, kbuf, len);
 	if (ret < 0)
 		return ret;
 

@@ -54,9 +54,10 @@ static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
 	struct at24c02 *at24 = i2c_get_clientdata(to_i2c_client(dev));
+	u8 kbuf[EEPROM_CAPACITY];
 	int i, ret, len = 0;
 
-	ret = at24c02_i2c_read_data(at24->client, BASE_ADDR, at24->buf,
+	ret = at24c02_i2c_read_data(at24->client, BASE_ADDR, kbuf,
 				    EEPROM_CAPACITY);
 	if (ret < 0)
 		return ret;

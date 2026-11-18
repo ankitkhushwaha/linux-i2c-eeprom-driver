@@ -134,10 +134,6 @@ int at24c02_chrdev_register(struct at24c02 *at24)
 		goto class_del;
 	}
 
-	at24->buf = devm_kmalloc(&at24->client->dev, PAGE_SIZE, GFP_KERNEL);
-	if (!at24->buf)
-		return -ENOMEM;
-
 	return 0;
 
 class_del:

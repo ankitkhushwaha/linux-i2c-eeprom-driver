@@ -100,6 +100,10 @@ static int at24c02_probe(struct i2c_client *client)
 	if (!at24)
 		return -ENOMEM;
 
+	at24->buf = devm_kmalloc(&client->dev, EEPROM_CAPACITY + 1, GFP_KERNEL);
+	if (!at24->buf)
+		return -ENOMEM;
+
 	at24->client = client;
 	at24->reg = BASE_ADDR;
 

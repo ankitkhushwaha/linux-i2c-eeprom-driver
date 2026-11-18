@@ -71,7 +71,39 @@ static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 static ssize_t at24c02_write(struct file *filp, const char __user *buf,
 			     size_t count, loff_t *f_pos)
 {
-	return 0;
+	struct at24c02 *at24 = filp->private_data;
+	struct i2c_client *client = at24->client;
+	u8 *tmp_buf;
+	size_t len;
+	int ret;
+
+	if (*f_pos >= EEPROM_CAPACITY)
+		return 0;
+
+	len = min_t(size_t, count, EEPROM_CAPACITY - *f_pos);
+	pr_debug("before f_pos: %llu, count_before: %zu, count_final:%zu\n",
+		 *f_pos, count, len);
+
+	if (len == 1) {
+		pr_err("address without data point given\n");
+		return -EINVAL;
+	}
+
+	tmp_buf = memdup_user(buf, len);
+	if (IS_ERR(tmp_buf)) {
+		pr_err("Invalid input given\n");
+		return -EFAULT;
+	}
+
+	pr_debug("buffer: %s", tmp_buf);
+	ret = at24c02_i2c_write_data(client, tmp_buf, len);
+	if (ret < 0)
+		return ret;
+
+	*f_pos += len;
+
+	pr_debug("after f_pos: %llu, count: %zu, ret:%d", *f_pos, len, ret);
+	return len;
 }
 
 static int at24c02_open(struct inode *inode, struct file *filp)

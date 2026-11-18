@@ -38,13 +38,16 @@ int at24c02_i2c_read_data(struct i2c_client *client, u8 reg, u8 *buf, int count)
 	if (!count)
 		return 0;
 
+	mutex_lock(&at24->lock);
 	ret = _at24c02_i2c_read_data(client, reg, buf, count);
 	if (ret < 0)
-		return ret;
+		goto fail;
 
 	/* update the address pointer */
 	at24->reg = reg + ret;
 
+fail:
+	mutex_unlock(&at24->lock);
 	return ret;
 }
 
@@ -95,6 +98,7 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 	dev_info(&client->dev, "base_addr:0x%02x count: %d\n", base_addr,
 		 count);
 
+	mutex_lock(&at24->lock);
 	while (remaining) {
 		reg = base_addr + written;
 		room = EEPROM_PAGE_SIZE - (reg % EEPROM_PAGE_SIZE);
@@ -109,7 +113,7 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 		if (ret < 0) {
 			pr_err("i2c write failed: written:%d, remaining:%d, ret=%d\n",
 			       written, remaining, ret);
-			return ret;
+			goto fail;
 		}
 
 		/* update the address pointer */
@@ -128,5 +132,7 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 	* transferred, else error code.
 	*/
 	ret = written;
+fail:
+	mutex_unlock(&at24->lock);
 	return ret;
 }

@@ -8,9 +8,9 @@
 
 #include <linux/kconfig.h>
 #include <linux/types.h>
+#include <linux/mutex.h>
 #include <linux/cdev.h>
 
-#include <linux/mutex.h>
 #define MODULE_NAME "eeprom"
 
 struct i2c_client;
@@ -25,6 +25,7 @@ struct at24c02 {
 	struct i2c_client *client;
 	struct device *device;
 	struct class *class;
+	struct mutex lock;
 	struct cdev cdev;
 	dev_t devt;
 	u8 *buf;

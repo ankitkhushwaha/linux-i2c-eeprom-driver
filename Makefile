@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 obj-m += at24c02_drv.o
 
-CONFIG_AT24C02_CHARDEV ?= y
+CONFIG_AT24C02_CHARDEV ?= n
 
 at24c02_drv-y := core/at24c02_core.o core/at24c02_i2c.o
 at24c02_drv-$(CONFIG_AT24C02_CHARDEV) += core/at24c02_chrdev.o

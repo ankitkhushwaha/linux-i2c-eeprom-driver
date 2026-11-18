@@ -95,6 +95,9 @@ int at24c02_i2c_write_data(struct i2c_client *client, u8 *buf, size_t count)
 	base_addr = buf[0];
 	remaining = count - 1;
 
+	dev_info(&client->dev, "base_addr:0x%02x count: %d\n", base_addr,
+		 count);
+
 	while (remaining) {
 		reg = base_addr + written;
 		room = EEPROM_PAGE_SIZE - (reg % EEPROM_PAGE_SIZE);

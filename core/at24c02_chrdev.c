@@ -59,7 +59,7 @@ static ssize_t at24c02_read(struct file *filp, char __user *buf, size_t count,
 	if (ret < 0)
 		return ret;
 
-	if (copy_to_user(buf, at24->buf, ret) > 0) {
+	if (copy_to_user(buf, kbuf, ret) > 0) {
 		pr_warn("copy_to_user failed to read\n");
 		return -EINVAL;
 	}

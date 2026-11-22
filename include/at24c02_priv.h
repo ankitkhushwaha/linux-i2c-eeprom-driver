@@ -28,7 +28,6 @@ struct at24c02 {
 	struct mutex lock;
 	struct cdev cdev;
 	dev_t devt;
-	u8 *buf;
 	u8 reg;
 };
 

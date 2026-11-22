@@ -65,7 +65,7 @@ static ssize_t eeprom_show(struct device *dev, struct device_attribute *attr,
 
 	for (i = 0; i < EEPROM_CAPACITY; i++)
 		len += scnprintf(buf + len, PAGE_SIZE - len, "0x%02x%s",
-				 at24->buf[i], i == ret - 1 ? "\n" : " ");
+				 kbuf[i], i == ret - 1 ? "\n" : " ");
 	len += scnprintf(buf + len, PAGE_SIZE - len, "\n");
 
 	return len;
@@ -168,10 +168,6 @@ static int at24c02_probe(struct i2c_client *client)
 
 	at24 = devm_kmalloc(&client->dev, sizeof(*at24), GFP_KERNEL);
 	if (!at24)
-		return -ENOMEM;
-
-	at24->buf = devm_kmalloc(&client->dev, EEPROM_CAPACITY + 1, GFP_KERNEL);
-	if (!at24->buf)
 		return -ENOMEM;
 
 	at24->client = client;
